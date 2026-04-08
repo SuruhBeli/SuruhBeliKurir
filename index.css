@@ -1,0 +1,187 @@
+/* RESET & BODY */
+html, body {
+  margin: 0;
+  font-family: sans-serif;
+  background: #FFF7ED;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+*, *::before, *::after {
+  box-sizing: inherit;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+#app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding-bottom: 100px;
+  overflow-x: hidden;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+:root{
+     --navbar-bg: #FFF7ED;
+    --navbar-text: #6B7280;
+    --navbar-active-bg: #FB923C;
+    --navbar-active-text: #FB923C;
+    --navbar-border-radius: 35px;
+    --navbar-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    --navbar-glass-bg: rgba(255,255,255,0.55);
+    --navbar-glass-border: 1px solid rgba(255,255,255,0.35);
+    --navbar-glass-blur: blur(14px);
+    --nav-circle-shadow: none;
+}
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select:none;
+    -webkit-user-select:none;
+    outline:none;
+  }
+/* NAVBAR */
+.navbar-bottom {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 450px;
+  height: 70px;
+
+  background: var(--navbar-bg);
+  border-radius: var(--navbar-border-radius);
+  box-shadow: var(--navbar-shadow);
+
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 100;
+  transition: all 0.35s ease;
+}
+/* ===============================
+   MODE GEMPA / TRUE GLASSMORPHISM
+   =============================== */
+.navbar-bottom.gempa-mode{
+  background: var(--navbar-glass-bg);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: var(--navbar-glass-border);
+
+  /* Shadow glass (lebih premium, tidak berat) */
+  box-shadow:
+    0 10px 30px rgba(0,0,0,0.25),
+    inset 0 1px 0 rgba(255,255,255,0.15);
+}
+
+/* Highlight tipis biar efek glass lebih hidup */
+.navbar-bottom.gempa-mode::before{
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 12%;
+  width: 76%;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255,255,255,0.35),
+    transparent
+  );
+  pointer-events: none;
+}
+
+/* ===============================
+   NAV ITEM
+   =============================== */
+.nav-item {
+  position: relative;
+  flex: 1;
+  text-align: center;
+  cursor: pointer;
+  color: var(--navbar-text);
+  z-index: 2; /* di atas circle */
+  transition: transform 0.2s ease;
+}
+
+/* Tap effect (mobile friendly hover) */
+.nav-item:active{
+  transform: scale(0.95);
+}
+
+/* ===============================
+   ICON SVG
+   =============================== */
+.nav-item svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: var(--navbar-text);
+  stroke-width: 1.3;
+  transition: 
+    transform 0.4s cubic-bezier(.68,-0.55,.27,1.55),
+    stroke 0.3s ease;
+}
+
+.nav-item.active svg {
+  stroke: var(--navbar-active-text);
+  transform: translateY(-15px) scale(1.25);
+}
+
+/* ===============================
+   TEXT LABEL (FIX BUG WARNA)
+   =============================== */
+.nav-item span {
+  display: block;
+  margin-top: 1px;
+  font-size: 15px;
+  font-weight: 700;
+  transition: transform 0.3s ease, color 0.3s ease;
+
+  /* 🔥 FIX: default harus text biasa, bukan aktif */
+  color: var(--navbar-text);
+}
+
+.nav-item.active span {
+  transform: translateY(-5px);
+  color: var(--navbar-active-text);
+}
+
+/* ===============================
+   ACTIVE BACKGROUND CIRCLE (SMOOTH)
+   =============================== */
+.nav-active-circle {
+  position: absolute;
+  top: -22px;
+  width: 62px;
+  height: 62px;
+
+  background: var(--border-soft);
+  border-radius: 50%;
+
+  /* pakai variable biar dinamis */
+  box-shadow: var(--nav-circle-shadow);
+
+  transition:
+    left 0.45s cubic-bezier(.68,-0.55,.27,1.55),
+    transform 0.3s ease;
+
+  z-index: 1;
+  pointer-events: none;
+}
+/* Navbar sembunyi smooth ke bawah */
+.navbar-bottom.hidden {
+  transform: translateX(-50%) translateY(120px); /* geser ke bawah */
+  opacity: 0;
+  pointer-events: none;
+}

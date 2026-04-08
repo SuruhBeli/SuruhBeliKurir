@@ -1,0 +1,356 @@
+/* ================= HEADER ================= */
+.header-tugas {
+  position: fixed; /* biar fixed seperti selection-bar */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 60px; /* konsisten dengan selection-bar */
+  padding: 0 16px; /* horizontal padding konsisten */
+  background: linear-gradient(135deg, #FB923C, #F97316);
+  color: white;
+  font-weight: bold;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 9999;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
+}
+
+/* Header teks */
+.header-tugas h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.header-tugas p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+/* Spasi konten agar tidak tertutup header */
+.view-tugas {
+  position: absolute;
+  top: 60px; /* sesuai tinggi header */
+  left: 0;
+  width: 100%;
+  height: calc(100% - 60px - 100px); /* header + navbar */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 16px 100px; /* bottom padding untuk navbar */
+  background: #FFF7ED;
+}
+
+/* ================= TABS ================= */
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding-top: 60px;
+  margin: 16px 0;
+}
+
+.tab {
+  padding: 8px 16px;
+  background: #fff;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: 0.2s;
+}
+
+.tab.active {
+  background: #FB923C;
+  color: #fff;
+}
+
+.tab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* ================= LIST ================= */
+.orders-container {
+  padding: 16px;
+}
+
+.order-card {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  gap: 12px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+}
+
+.order-card img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* 🔥 WRAPPER BARU */
+.order-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+/* INFO */
+.order-info {
+  display: flex;
+  flex-direction: column;
+  max-width: 60%;
+}
+
+.order-info .layanan {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.order-info .beliDi {
+  font-size: 12px;
+  color: #555;
+}
+
+/* 🔥 ACTION BUTTON WRAPPER */
+.order-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* BUTTON UMUM */
+.order-card .btn-selesai,
+.order-card .btn-chat {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+  white-space: nowrap;
+}
+
+/* WARNA */
+.btn-selesai {
+  background: #10B981;
+  color: #fff;
+}
+
+.btn-chat {
+  background: #3B82F6;
+  color: #fff;
+}
+
+/* HOVER */
+.btn-selesai:hover,
+.btn-chat:hover {
+  transform: translateY(-1px);
+  opacity: 0.9;
+}
+
+/* ================= EMPTY ================= */
+.empty-orders {
+  display: none;
+  text-align: center;
+  margin-top: 50px;
+  font-weight: 700;
+  color: #555;
+  font-size: 18px;
+  position: relative;
+}
+
+.empty-orders::after {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 8px;
+  background: #FB923C;
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-left: -4px;
+  margin-top: 20px;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(2); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+/* ================= POPUP ================= */
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.popup-overlay.show {
+  display: flex;
+}
+
+.popup-card {
+  width: 320px;
+  max-width: 90%;
+  background: #fff;
+  border-radius: 18px;
+  padding: 16px 14px;
+  font-family: 'Nunito', monospace;
+  font-size: 13px;
+  color: #000;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+  animation: popIn 0.25s ease;
+}
+
+@keyframes popIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* STRUK HEADER */
+.receipt-header {
+  text-align: center;
+  border-bottom: 1px dashed #000;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+}
+.receipt-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  margin-bottom: 6px;
+  opacity: 0.9;
+}
+.receipt-title {
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.receipt-sub {
+  font-size: 11px;
+  color: #555;
+}
+/* 🔥 BELI DI CLICKABLE */
+.beliDi.clickable,
+.value.clickable {
+  color: #3B82F6;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.beliDi.clickable:hover,
+.value.clickable:hover {
+  text-decoration: underline;
+}
+/* DASH */
+.dash {
+  border-top: 1px dashed #000;
+  margin: 10px 0;
+}
+
+/* ROW */
+.row {
+  display: flex;
+  justify-content: space-between;
+  margin: 4px 0;
+}
+
+.label {
+  font-weight: 600;
+}
+
+.value {
+  font-weight: 500;
+  text-align: right;
+}
+
+/* STATUS */
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.badge-proses { background: #FB923C; color: #fff; }
+.badge-selesai { background: #10B981; color: #fff; }
+.badge-gagal { background: #EF4444; color: #fff; }
+
+/* FOOTER */
+.receipt-footer {
+  text-align: center;
+  font-size: 11px;
+  color: #555;
+  margin-top: 8px;
+}
+
+/* BUTTON POPUP */
+.btn-close {
+  margin-top: 12px;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: #FB923C;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-close:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* LOADING */
+#loadingPopup .popup-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  padding: 20px;
+}
+
+/* CONFIRM */
+#confirmPopup .popup-card {
+  max-width: 280px;
+  text-align: center;
+  padding: 16px;
+}
+
+#confirmPopup #confirmCancel {
+  background: #9CA3AF;
+  color: #fff;
+}
+
+#confirmPopup #confirmOk {
+  background: #10B981;
+  color: #fff;
+}

@@ -1,0 +1,232 @@
+/* =========================
+   ROOT COLORS
+========================= */
+:root {
+  --bg-main: #FFF7ED;
+  --text-main: #7C2D12;
+  --card-bg: #ffffff;
+  --border-soft: #FED7AA;
+  --accent: #FB923C;
+  --text-secondary: #374151;
+}
+
+/* =========================
+   HERO HEADER
+========================= */
+.hero-profile {
+  width: 100%;
+  height: 220px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-profile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.25));
+}
+
+/* =========================
+   PROFILE CARD
+========================= */
+.profile-card {
+  position: relative;
+  margin: -70px 16px 0 16px;
+  background: var(--card-bg);
+  border-radius: 22px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.15);
+  border: 1px solid var(--border-soft);
+  z-index: 5;
+  justify-content: space-between; /* tombol di kanan */
+}
+
+/* =========================
+   PROFILE AVATAR
+========================= */
+.profile-avatar {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  font-size: 28px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  cursor: default;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* =========================
+   PROFILE INFO
+========================= */
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1; /* biar menyesuaikan sisa space */
+}
+
+.profile-name {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.profile-email {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+/* =========================
+   EDIT BUTTON (SVG)  
+========================= */
+.edit-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.edit-btn svg {
+  width: 20px;
+  height: 20px;
+  color: #fff;
+}
+
+/* =========================
+   POPUP PREVIEW AVATAR
+========================= */
+#avatarPreviewOverlay {
+  display: none; /* default hidden */
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 999;
+}
+
+#avatarPreviewOverlay.show {
+  display: flex;
+}
+
+#avatarPreviewImg {
+  width: auto;
+  max-width: 100%;
+  max-height: 400px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+/* overlay klik luar */
+.bottom-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 998; /* di bawah bottom sheet */
+  display: none; /* default hidden */
+}
+
+/* bottom sheet */
+.bottom-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: -100%;
+  height: 45%;
+  background: #FFF3E0; /* bottom content lembut */
+  border-top-left-radius: 24px; /* radius atas lebih lembut */
+  border-top-right-radius: 24px;
+  transition: bottom 0.3s ease;
+  z-index: 999;
+  color: var(--text-main);
+}
+
+.bottom-sheet.show {
+  bottom: 0;
+}
+
+.bottom-sheet-content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  overflow-y: auto;
+  background: #FFF3E0;
+  color: var(--text-main);
+}
+
+/* tombol & input */
+.bottom-sheet input {
+  padding: 8px;
+  border-radius: 6px;
+  border: none;
+  background: #FFE9D5;
+  color: var(--text-main);
+}
+
+.bottom-sheet button {
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.bottom-sheet button:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+/* =========================
+   EDIT AVATAR
+========================= */
+.edit-avatar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.edit-avatar img {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.edit-avatar input[type=file] {
+  display: block;
+}

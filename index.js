@@ -20,25 +20,19 @@ if (!window.firebaseInitialized) {
   console.log("✅ Firebase initialized");
 }
 
-// ====== DOM READY WRAPPER (ANTI ERROR) ====== //
-document.addEventListener("DOMContentLoaded", () => {
+// ====== DOM ====== //
+const navItems = document.querySelectorAll('.nav-item');
+const navCircle = document.getElementById('navCircle');
+const app = document.getElementById('app');
+const navbarBottom = document.querySelector('.navbar-bottom');
 
-  // ====== DOM ====== //
-  const navItems = document.querySelectorAll('.nav-item');
-  const navCircle = document.getElementById('navCircle');
-  const app = document.getElementById('app');
-  const navbarBottom = document.querySelector('.navbar-bottom');
+// ====== FLAGS ====== //
+window.APP_CACHE = {};
+window.viewInitialized = {}; // 🔥 kunci utama anti reload
+let activeView = null;
 
-  // 🔥 sembunyikan app dulu (WAJIB)
-  if (app) app.style.visibility = "hidden";
-
-  // ====== FLAGS ====== //
-  window.APP_CACHE = {};
-  window.viewInitialized = {};
-  let activeView = null;
-
-  // ====== AUTH ====== //
-  firebase.auth().onAuthStateChanged(user => {
+// ====== AUTH ====== //
+firebase.auth().onAuthStateChanged(user => {
 
     if (user) {
 
@@ -103,146 +97,200 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("authOverlay")?.remove();
   }
 
-  // ====== INIT APP ====== //
-  function initApp() {
-    if (window.appStarted) return;
-    window.appStarted = true;
+// ====== INIT APP ====== //
+function initApp() {
+  if (window.appStarted) return;
+  window.appStarted = true;
 
-    navItems.forEach((item, idx) => {
-      item.addEventListener('click', () => setActive(idx));
-    });
+  // 🔥 Nav click
+  navItems.forEach((item, idx) => {
+    item.addEventListener('click', () => setActive(idx));
+  });
 
-    window.addEventListener("hashchange", handleHashRouting);
+  if (app) app.style.visibility = 'visible';
 
-    window.addEventListener('resize', () => {
-      const active = document.querySelector('.nav-item.active');
-      if (active) {
-        updateNavCircle(Array.from(navItems).indexOf(active));
-      }
-    });
+  window.addEventListener("hashchange", handleHashRouting);
 
-    history.replaceState({app:true}, "", location.pathname);
-  }
-
-  // ====== BACK HANDLER ====== //
-  window.addEventListener('popstate', () => {
-    const currentView = activeView?.id?.replace('view-', '') || 'home';
-
-    if (window.activeRoomId || currentView === 'chatRoom') {
-      cleanupRoomListeners(true);
-      window.activeRoomId = null;
-      showView("chatlist");
-      history.replaceState({ view: 'chatlist' }, "", "#chatlist");
-    } 
-    else if(currentView !== 'home') {
-      const homeIdx = navIndex('home');
-      setActive(homeIdx, true);
-      history.replaceState({ view: 'home' }, "", "#home");
+  window.addEventListener('resize', () => {
+    const active = document.querySelector('.nav-item.active');
+    if (active) {
+      updateNavCircle(Array.from(navItems).indexOf(active));
     }
   });
 
-  // ====== VIEW HANDLER ====== //
-  function showView(viewName) {
+  history.replaceState({app:true}, "", location.pathname);
+}
+// ====== ANDROID BACK HANDLER ====== //
+window.addEventListener('popstate', (event) => {
+  // 🔥 Ambil view dari activeView atau default home
+  const currentView = activeView?.id?.replace('view-', '') || 'home';
 
-    document.querySelectorAll(".view").forEach(v => {
-      v.classList.remove("active");
-      v.style.display = "none";
-    });
-
-    const target = document.getElementById(`view-${viewName}`);
-    if (!target) return;
-
-    target.style.display = "block";
-    requestAnimationFrame(() => target.classList.add("active"));
-
-    activeView = target;
-
-    toggleNavbar(viewName !== 'chatRoom');
-
-    if (window.viewInitialized[viewName]) return;
-    window.viewInitialized[viewName] = true;
-
-    switch(viewName){
-      case "home": window.initHome?.(); break;
-      case "tugas": window.initTugas?.(); break;
-      case "chatlist": window.initChatList?.(); break;
-      case "chat": window.initChatRoomView?.(); break;
-      case "profil": window.initProfil?.(); break;
-    }
-  }
-
-  // ====== NAVIGATION ====== //
-  function setActive(idx, fromPop=false) {
-    if (idx === null || idx === undefined) return;
-
-    const viewName = navItems[idx].dataset.view;
-
-    navItems.forEach(i => i.classList.remove('active'));
-    navItems[idx].classList.add('active');
-
-    updateNavCircle(idx);
-    showView(viewName);
-
-    if (!fromPop) {
-      history.pushState({ view: viewName }, "", "#"+viewName);
-    }
-  }
-
-  function navIndex(viewName) {
-    const item = Array.from(navItems).find(i => i.dataset.view === viewName);
-    return item ? Array.from(navItems).indexOf(item) : 0;
-  }
-
-  function handleHashRouting() {
-    let hash = window.location.hash.replace('#','');
-    if (!hash) return;
-
-    const [viewName] = hash.split('?');
-    const idx = navIndex(viewName);
-
-    if (idx !== null) setActive(idx, true);
-  }
-
-  function updateNavCircle(idx){
-    const item = navItems[idx];
-    if (!item || !navCircle) return;
-
-    const rect = item.getBoundingClientRect();
-    const parentRect = item.parentElement.getBoundingClientRect();
-
-    const centerX = rect.left + rect.width / 2 - parentRect.left;
-
-    navCircle.style.left = `${centerX - navCircle.offsetWidth/2}px`;
-  }
-
-  function toggleNavbar(show){
-    navbarBottom?.classList.toggle("hidden", !show);
-    navItems.forEach(i => i.classList.toggle("hidden", !show));
-  }
-
-});
-
-let deferredPrompt;
-
-window.addEventListener("beforeinstallprompt", (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-
-  console.log("💡 Bisa install PWA");
-
-  // contoh tombol manual
-  const btn = document.getElementById("btnInstall");
-  if(btn){
-    btn.style.display = "block";
-
-    btn.onclick = async () => {
-      deferredPrompt.prompt();
-      const choice = await deferredPrompt.userChoice;
-      console.log(choice.outcome);
-      deferredPrompt = null;
-    };
+  // 🔥 Jika sedang di chatRoom, kembali ke chatlist
+  if (window.activeRoomId || currentView === 'chatRoom') {
+    cleanupRoomListeners(true);
+    roomId = null;
+    window.activeRoomId = null;
+    showView("chatlist");
+    history.replaceState({ view: 'chatlist' }, "", "#chatlist");
+  } 
+  // 🔥 Jika di view lain selain home, kembali ke home
+  else if(currentView !== 'home') {
+    const homeIdx = navIndex('home');
+    setActive(homeIdx, true); // fromPop = true
+    history.replaceState({ view: 'home' }, "", "#home");
+  } 
+  else {
+    // 🔥 Di home: biarkan default, keluar aplikasi
   }
 });
+
+// ====== BACK BUTTON ANDROID ======
+document.addEventListener('backbutton', (e) => {
+  e.preventDefault(); // cegah default exit app
+  if(window.activeRoomId){
+    // 🔥 Sedang di chatRoom → kembali ke chatList
+    cleanupRoomListeners(true);
+    window.roomId = null;
+    window.activeRoomId = null;
+    showView("chatlist");
+    history.replaceState({ view: 'chatlist' }, "", "#chatlist");
+  } else {
+    navigator.app.exitApp(); // di luar chatRoom → keluar app
+  }
+}, false);
+// ====== VIEW HANDLER ====== //
+function showView(viewName) {
+
+  // 🔥 HIDE semua view (fix double view)
+  document.querySelectorAll(".view").forEach(v => {
+    v.classList.remove("active");
+    v.style.display = "none";
+  });
+
+  const target = document.getElementById(`view-${viewName}`);
+  if (!target) return;
+
+  target.style.display = "block";
+  requestAnimationFrame(() => target.classList.add("active"));
+
+  activeView = target;
+
+  toggleNavbar(viewName !== 'chatRoom'); // pastikan id view = view-chatRoom
+
+  // 🔥 INIT SEKALI SAJA (INI KUNCI OPTIMASI)
+  if (window.viewInitialized[viewName]) return;
+  window.viewInitialized[viewName] = true;
+
+  console.log("🚀 Init view:", viewName);
+
+  switch(viewName){
+    case "home": window.initHome?.(); break;
+    case "tugas": window.initTugas?.(); break;
+    case "chatlist": window.initChatList?.(); break;
+    case "chat": window.initChatRoomView?.(); break;
+    case "profil": window.initProfil?.(); break;
+  }
+}
+
+// ====== NAVIGATION ====== //
+function setActive(idx, fromPop=false) {
+  if (idx === null || idx === undefined) return;
+
+  const viewName = navItems[idx].dataset.view;
+
+  navItems.forEach(i => i.classList.remove('active'));
+  navItems[idx].classList.add('active');
+
+  updateNavCircle(idx);
+  showView(viewName);
+
+  if (!fromPop) {
+    history.pushState({ view: viewName }, "", "#"+viewName);
+  }
+}
+
+function navIndex(viewName) {
+  const item = Array.from(navItems).find(i => i.dataset.view === viewName);
+  return item ? Array.from(navItems).indexOf(item) : 0;
+}
+
+// ====== HASH ROUTING ====== //
+function handleHashRouting() {
+  let hash = window.location.hash.replace('#','');
+  if (!hash) return;
+
+  const [viewName] = hash.split('?');
+  const idx = navIndex(viewName);
+
+  if (idx !== null) setActive(idx, true);
+}
+
+// ====== NAVBAR UI ====== //
+function updateNavCircle(idx){
+  const item = navItems[idx];
+  if (!item || !navCircle) return;
+
+  const rect = item.getBoundingClientRect();
+  const parentRect = item.parentElement.getBoundingClientRect();
+
+  const centerX = rect.left + rect.width / 2 - parentRect.left;
+
+  navCircle.style.left = `${centerX - navCircle.offsetWidth/2}px`;
+}
+
+// ====== TOGGLE NAVBAR ====== //
+function toggleNavbar(show){
+  navbarBottom?.classList.toggle("hidden", !show);
+  navItems.forEach(i => i.classList.toggle("hidden", !show));
+}
+
+// ====== POPUP MANAGER ====== //
+window.PopupManager = (function(){
+  const popups = {
+    detail: document.getElementById("popupDetail"),
+    edit: document.getElementById("popupEdit"),
+    alert: document.getElementById("popupAlert"),
+    profil: document.getElementById("popupEditProfile"),
+  };
+
+  function closeAll(){
+    Object.values(popups).forEach(p => p?.classList.remove("show"));
+    document.body.classList.remove("popup-open");
+  }
+
+  function showDetail(content){
+    popups.detail?.classList.add("show");
+    if(popups.detail){
+      popups.detail.querySelector("#popupContent").innerHTML = content || '';
+    }
+    document.body.classList.add("popup-open");
+  }
+
+  function closeDetail(){
+    popups.detail?.classList.remove("show");
+    document.body.classList.remove("popup-open");
+  }
+
+  function showEdit(){
+    popups.edit?.classList.add("show");
+    document.body.classList.add("popup-open");
+  }
+
+  function closeEdit(){
+    popups.edit?.classList.remove("show");
+    document.body.classList.remove("popup-open");
+  }
+
+  function showAlert(msg){
+    if(!popups.alert) return;
+    popups.alert.classList.add("show");
+    popups.alert.querySelector("#popupAlertMessage").innerText = msg;
+    document.body.classList.add("popup-open");
+  }
+
+  return { closeAll, showDetail, closeDetail, showEdit, closeEdit, showAlert };
+})();
+
 // REGISTER SERVICE WORKER
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {

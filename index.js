@@ -222,11 +222,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 
-// ====== SERVICE WORKER ====== //
+let deferredPrompt;
+
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+
+  console.log("💡 Bisa install PWA");
+
+  // contoh tombol manual
+  const btn = document.getElementById("btnInstall");
+  if(btn){
+    btn.style.display = "block";
+
+    btn.onclick = async () => {
+      deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+      console.log(choice.outcome);
+      deferredPrompt = null;
+    };
+  }
+});
+// REGISTER SERVICE WORKER
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js")
-      .then(() => console.log("✅ SW registered"))
-      .catch(err => console.log("❌ SW error:", err));
+    navigator.serviceWorker
+      .register("./service-worker.js")
+      .then(reg => {
+        console.log("✅ Service Worker aktif", reg);
+      })
+      .catch(err => {
+        console.log("❌ Service Worker gagal", err);
+      });
   });
 }

@@ -181,4 +181,27 @@ window.initProfil = async function() {
     avatarEl.textContent = "?";
     avatarEl.style.cursor = "default";
   }
+  const btnLogout = document.getElementById("btnLogout");
+  
+  if (btnLogout) {
+    btnLogout.onclick = async () => {
+      const confirmLogout = confirm("Yakin mau logout?");
+      if (!confirmLogout) return;
+  
+      try {
+        await firebase.auth().signOut();
+  
+        // 🔥 Bersihin state global
+        window.currentUser = null;
+        window.activeRoomId = null;
+  
+        // 🔥 Redirect ke login
+        window.location.href = "login.html";
+  
+      } catch (err) {
+        console.error("Logout error:", err);
+        alert("Gagal logout");
+      }
+    };
+  }
 };

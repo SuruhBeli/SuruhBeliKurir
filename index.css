@@ -185,3 +185,82 @@ html, body {
   opacity: 0;
   pointer-events: none;
 }
+
+/* ===== AUTH OVERLAY ===== */
+#authOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+/* BOX */
+.auth-box {
+  background: #fff;
+  padding: 28px;
+  border-radius: 20px;
+  text-align: center;
+  width: 85%;
+  max-width: 320px;
+  animation: fadeInScale 0.25s ease;
+}
+
+/* ICON */
+.auth-icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+
+/* TITLE */
+.auth-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  color: #111;
+}
+
+/* DESC */
+.auth-desc {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 18px;
+}
+
+/* BUTTON */
+.auth-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: #FB923C;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.auth-btn:active {
+  transform: scale(0.97);
+}
+
+.auth-btn:hover {
+  background: #ea580c;
+}
+
+/* ANIMATION */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

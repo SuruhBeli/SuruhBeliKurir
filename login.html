@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#FB923C">
+  <link rel="icon" href="ikon-512.png">
+<title>Kurir Login - SuruhBeli</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: #FFF7ED;
+    color: #7C2D12;
+  }
+
+  .card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 32px;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  }
+
+  h1 {
+    text-align: center;
+    margin-bottom: 24px;
+    font-weight: 800;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  label {
+    margin-bottom: 6px;
+    font-weight: 700;
+  }
+
+  input {
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid #FED7AA;
+    font-size: 14px;
+  }
+
+  .btn-login {
+    width: 100%;
+    padding: 14px;
+    background: #FB923C;
+    color: white;
+    font-weight: 800;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  .btn-login:active {
+    transform: scale(0.97);
+  }
+
+  .alert {
+    margin-top: 12px;
+    color: red;
+    font-weight: 700;
+    text-align: center;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>Login Kurir</h1>
+
+  <div class="form-group">
+    <label>Email</label>
+    <input type="email" id="email" placeholder="Masukkan email">
+  </div>
+
+  <div class="form-group">
+    <label>Password</label>
+    <input type="password" id="password" placeholder="Masukkan password">
+  </div>
+
+  <button class="btn-login" onclick="loginKurir()">Login</button>
+
+  <div class="alert" id="alertMsg"></div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+  // ===== FIREBASE CONFIG (WAJIB SAMA DENGAN INDEX) =====
+  firebase.initializeApp({
+    apiKey: "AIzaSyByQl0BXZoSMzrULUNA6l7UVFQjXmvsdJE",
+    authDomain: "suruhbeli-e8ae8.firebaseapp.com",
+    projectId: "suruhbeli-e8ae8",
+    storageBucket: "suruhbeli-e8ae8.appspot.com",
+    messagingSenderId: "5783247867",
+    appId: "1:5783247867:web:8f57e09a7dc4565378c95e"
+  });
+
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  const alertMsg = document.getElementById('alertMsg');
+
+  // ===== LOGIN FUNCTION =====
+  async function loginKurir(){
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
+
+    alertMsg.style.display = 'none';
+
+    if(!email || !password){
+      showAlert("Email dan password harus diisi");
+      return;
+    }
+
+    try{
+      // 🔥 LOGIN AUTH
+      const userCredential = await auth.signInWithEmailAndPassword(email, password);
+      const user = userCredential.user;
+
+      // 🔥 VALIDASI KURIR (LEBIH AMAN)
+      const snapshot = await db.collection("kurir")
+        .where("uid", "==", user.uid)
+        .limit(1)
+        .get();
+
+      if(snapshot.empty){
+        showAlert("Akun ini bukan kurir!");
+        await auth.signOut();
+        return;
+      }
+
+      // 🔥 SUCCESS → MASUK APP
+      window.location.href = "index.html";
+
+    }catch(error){
+      console.error("Login error:", error);
+
+      let msg = "Terjadi kesalahan";
+
+      if(error.code === "auth/user-not-found"){
+        msg = "Email tidak terdaftar";
+      } 
+      else if(error.code === "auth/wrong-password"){
+        msg = "Password salah";
+      } 
+      else if(error.code === "auth/invalid-email"){
+        msg = "Format email tidak valid";
+      } 
+      else if(error.code === "auth/too-many-requests"){
+        msg = "Terlalu banyak percobaan. Coba lagi nanti";
+      }
+
+      showAlert(msg);
+    }
+  }
+
+  // ===== ALERT =====
+  function showAlert(msg){
+    alertMsg.innerText = msg;
+    alertMsg.style.display = 'block';
+  }
+</script>
+</body>
+</html>

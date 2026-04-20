@@ -1,207 +1,400 @@
-// ===== INIT HOME ===== //
-window.initHome = function() {
-  if (!window.currentUser) return;
+/* ================= GLOBAL LOTTIE STORAGE ================= */
+let lottieInstances = [];
+let semuaToko = [];
+let semuaDesa = []; // pastikan di-load dari firestore sebelum pakai
 
-  console.log("🔥 initHome (sekali saja)");
+/* ================= INIT HOME ================= */
+window.initHome = function () {
 
-  listenOrdersHome();
-};
+  function initHome() {
+    const heroImage = document.getElementById("heroImage");
+    const bannerCarousel = document.getElementById("bannerCarousel");
+    const bannerDots = document.getElementById("bannerDots");
+    const scrollHeader = document.getElementById("scrollHeader");
+    const logoTop = document.querySelector(".logo-top");
+    const lottieContainer = document.getElementById("lottieAnimation");
 
-// ===== REALTIME LISTENER ===== //
-function listenOrdersHome() {
-  const ordersContainer = document.getElementById("ordersContainer");
-  const emptyOrders = document.getElementById("emptyOrders");
-  const summaryCard = document.getElementById("summaryCard");
-  const headerFoto = document.getElementById("headerFoto");
-
-  if (!ordersContainer || !emptyOrders || !summaryCard) return;
-
-  headerFoto.src = "header.png";
-
-  if (!window.USER_CACHE) window.USER_CACHE = {};
-
-  // 🔥 stop listener lama
-  if (window.LISTENERS?.home) {
-    window.LISTENERS.home();
+    loadStockFoto(heroImage, bannerCarousel, bannerDots);
+    initLotties(lottieContainer);
+    toggleHomeHeader(true);
+    loadDesa().then(()=>loadToko());
   }
-
-  // 🔥 QUERY OPTIMAL
-  window.LISTENERS.home = window.db.collection("orders")
-    .where("status", "==", "Dibuat")
-    .orderBy("createdAt", "desc") // 🔥 wajib
-    .limit(5) // 🔥 limit biar hemat
-    .onSnapshot(async snapshot => {
-
-      ordersContainer.innerHTML = "";
-
-      if (snapshot.empty) {
-        ordersContainer.style.display = "none";
-        emptyOrders.style.display = "flex";
-        summaryCard.innerText = "Belum ada pesanan masuk";
-        return;
+  async function loadStockFoto(heroImage, container, dots){
+  
+    const skeleton = document.getElementById("heroSkeleton");
+  
+    try{
+  
+      // 🔥 CACHE FIRST
+      let cached = localStorage.getItem("stockfoto");
+      let data;
+  
+      if(cached){
+        data = JSON.parse(cached);
+      }else{
+        const doc = await db.collection("stockfoto").doc("foto").get();
+        data = doc.exists ? doc.data() : {};
+        localStorage.setItem("stockfoto", JSON.stringify(data));
       }
+  
+      // ===== HERO =====
+      const heroUrl = data.headerhome || "default.png";
+      heroImage.src = heroUrl;
+      heroImage.onload = ()=> {
+        heroImage.style.opacity = 1;
+        skeleton?.classList.remove("skeleton");
+      };
+  
+      // ===== BANNER =====
+      const banners = Array.isArray(data.bannerhome) ? data.bannerhome : [];
+      renderCarousel(container, dots, banners);
+  
+    }catch(err){
+      console.error("Stockfoto error:", err);
+    }
+  }
+  /* ================= LOAD DATA DESA ================= */
+async function loadDesa(){
 
-      ordersContainer.style.display = "block";
-      emptyOrders.style.display = "none";
-      summaryCard.innerText = `Pesanan terbaru: ${snapshot.size}`;
+  try{
 
-      const orders = await Promise.all(snapshot.docs.map(async doc => {
-        const data = doc.data();
-        let fotoSrc = "https://via.placeholder.com/50/FB923C/ffffff?text=U";
+    // 🔥 cache memory
+    if(window.cacheDesa){
+      semuaDesa = window.cacheDesa;
+      return;
+    }
 
-        if (data.userId) {
+    // 🔥 cache localStorage
+    const cached = localStorage.getItem("desa");
 
-          if (window.USER_CACHE[data.userId]) {
-            return { docId: doc.id, data, fotoSrc: window.USER_CACHE[data.userId] };
-          }
+    if(cached){
+      semuaDesa = JSON.parse(cached);
+      window.cacheDesa = semuaDesa;
+      return;
+    }
 
-          try {
-            const userDoc = await window.db.collection("users").doc(data.userId).get();
+    // 🔥 fetch firestore
+    const snapshot = await db.collection("desa").get();
 
-            if (userDoc.exists) {
-              const userData = userDoc.data();
+    semuaDesa = snapshot.docs.map(d=>({
+      id:d.id,
+      lat:d.data().lat,
+      lng:d.data().lng
+    }));
 
-              if (userData.fotoProfil) {
-                fotoSrc = userData.fotoProfil;
-              } else if (userData.nama) {
-                const inisial = userData.nama.split(" ")
-                  .map(n => n[0].toUpperCase())
-                  .join("");
+    localStorage.setItem("desa", JSON.stringify(semuaDesa));
+    window.cacheDesa = semuaDesa;
 
-                fotoSrc = `https://via.placeholder.com/50/FB923C/ffffff?text=${encodeURIComponent(inisial)}`;
-              }
-            }
-
-            window.USER_CACHE[data.userId] = fotoSrc;
-
-          } catch (e) {
-            console.error("User fetch error:", e);
-          }
-        }
-
-        return { docId: doc.id, data, fotoSrc };
-      }));
-
-      // ===== RENDER ===== //
-      orders.forEach(({ docId, data, fotoSrc }) => {
-        const card = document.createElement("div");
-        card.classList.add("order-card");
-
-        card.innerHTML = `
-          <img class="order-avatar" src="${fotoSrc}">
-          <div class="order-info">
-            <div class="judul">${data.judul || "Pesanan Baru"}</div>
-            <div class="layanan">${data.layanan || "-"}</div>
-          </div>
-        `;
-
-        const btnLokasi = document.createElement("button");
-        btnLokasi.classList.add("btn-lokasi");
-        btnLokasi.innerText = "Cek Lokasi";
-
-        btnLokasi.onclick = (e) => {
-          e.stopPropagation();
-          if (data.lat && data.lng) {
-            window.open(`https://www.google.com/maps/search/?api=1&query=${data.lat},${data.lng}`);
-          } else {
-            window.PopupManager.showAlert("Lokasi belum tersedia!");
-          }
-        };
-
-        card.appendChild(btnLokasi);
-
-        card.onclick = () => {
-          window.selectedOrderId = docId;
-          window.selectedOrderData = data;
-
-          document.getElementById("popupJudul").innerText = data.layanan || "-";
-          document.getElementById("popupPesanan").innerText = data.pesanan || "-";
-          document.getElementById("popupCatatan").innerText = data.catatan || "-";
-          document.getElementById("popupBeliDi").innerText = data.beliDi || "-";
-
-          const btnAmbil = document.getElementById("btnAmbil");
-
-          if (data.kurir && data.kurir !== window.currentUser.uid) {
-            btnAmbil.disabled = true;
-            btnAmbil.innerText = "Sudah diambil kurir lain";
-          } else if (data.kurir === window.currentUser.uid) {
-            btnAmbil.disabled = true;
-            btnAmbil.innerText = "Anda mengambil order ini";
-          } else {
-            btnAmbil.disabled = false;
-            btnAmbil.innerText = "Ambil Pesanan";
-          }
-
-          document.getElementById("orderPopup").classList.add("show");
-        };
-
-        ordersContainer.appendChild(card);
-      });
-
-    }, err => {
-      console.error("❌ Listener home error:", err);
-      summaryCard.innerText = "Gagal memuat data";
-    });
+  }catch(err){
+    console.error("Gagal load desa:", err);
+    semuaDesa = [];
+  }
 }
 
-// ===== AMBIL PESANAN ===== //
-document.getElementById("btnAmbil").addEventListener("click", async () => {
-  if (!window.selectedOrderId || !window.currentUser) return;
+  /* ================= HERO ================= */
+  async function loadHero(heroImage) {
+    const skeleton = document.getElementById("heroSkeleton");
+    if (!heroImage) return;
+    try {
+      const doc = await firebase.firestore()
+        .collection("stockfoto")
+        .doc("foto")
+        .get();
+      const url = doc.exists ? doc.data().headerhome : null;
+      heroImage.src = url || "default.png";
+      heroImage.onload = () => { heroImage.style.opacity = 1; skeleton && skeleton.classList.remove("skeleton"); };
+      heroImage.onerror = () => { heroImage.src = "default.png"; skeleton && skeleton.classList.remove("skeleton"); };
+    } catch (err) {
+      heroImage.src = "default.png";
+      skeleton && skeleton.classList.remove("skeleton");
+    }
+  }
 
-  const loading = document.getElementById("loadingPopup");
-  const loadingText = document.getElementById("loadingText");
+  /* ================= BANNERS ================= */
+  async function loadBanners(container, dots) {
+    if (!container || !dots) return;
+    try {
+      const doc = await firebase.firestore()
+        .collection("stockfoto")
+        .doc("foto")
+        .get();
+      const banners = doc.exists && Array.isArray(doc.data().bannerhome) ? doc.data().bannerhome : [];
+      renderCarousel(container, dots, banners);
+    } catch (err) {
+      console.error("Banner error:", err);
+      container.innerHTML = "";
+    }
+  }
 
-  loadingText.innerText = "Sedang memproses...";
-  loading.classList.add("show");
+  function renderCarousel(container, dots, banners) {
+    container.innerHTML = "";
+    dots.innerHTML = "";
+    if (!banners.length) { container.innerHTML = `<div style="height:150px;border-radius:10px;background:#eee;"></div>`; return; }
+    let currentIndex = 0;
+    let interval;
+    banners.forEach((url,i)=>{
+      const img = document.createElement("img");
+      img.src = url || "default.png";
+      img.onerror = ()=>img.src="default.png";
+      if(i===0) img.classList.add("active");
+      container.appendChild(img);
+      const dot = document.createElement("span");
+      dot.className = "dot"+(i===0?" active":"");
+      dot.onclick = ()=>showBanner(i);
+      dots.appendChild(dot);
+    });
+    function showBanner(index){
+      const width = container.children[0]?.offsetWidth||0;
+      container.scrollTo({left: width*index, behavior:"smooth"});
+      currentIndex=index;
+      updateDots();
+    }
+    function updateDots(){ [...dots.children].forEach((d,i)=>d.classList.toggle("active",i===currentIndex)); }
+    function startAuto(){ if(banners.length<2) return; interval=setInterval(()=>{ currentIndex=(currentIndex+1)%banners.length; showBanner(currentIndex); },3500); }
+    startAuto();
+  }
 
-  try {
-    const kurirDoc = await window.db.collection("kurir").doc(window.currentUser.uid).get();
-    if (!kurirDoc.exists) throw new Error("Data kurir tidak ditemukan!");
+  /* ================= LOTTIE ================= */
+function initLotties(mainContainer){
+  if(typeof lottie==="undefined") return;
 
-    const noKurir = kurirDoc.data().noHP || "";
+  // 1️⃣ Hapus animasi lama
+  lottieInstances.forEach(anim=>anim.destroy());
+  lottieInstances=[];
 
-    const orderRef = window.db.collection("orders").doc(window.selectedOrderId);
-    const orderDoc = await orderRef.get();
-    if (!orderDoc.exists) throw new Error("Order tidak ditemukan!");
+  // 2️⃣ Observer untuk autoplay saat terlihat
+  const observer = new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        const anim = entry.target._lottie;
+        anim?.play();
+      } else {
+        const anim = entry.target._lottie;
+        anim?.pause();
+      }
+    });
+  }, { threshold: 0.3 });
 
-    const orderData = orderDoc.data();
+  // 3️⃣ List animasi
+  const names=["makanan","belanja","barang","lainnya"];
+  names.forEach(name=>{
+    const container=document.getElementById(`lottie-${name}`);
+    if(!container) return;
 
-    if (orderData.kurir && orderData.kurir !== window.currentUser.uid) {
-      throw new Error("Order sudah diambil kurir lain!");
+    const anim=lottie.loadAnimation({
+      container,
+      renderer:"svg",
+      loop:true,
+      autoplay:false, // ❌ autoplay off
+      path:`${name}.json`
+    });
+
+    // 4️⃣ remove skeleton saat anim siap
+    anim.addEventListener("DOMLoaded", ()=>container.classList.remove("skeleton"));
+
+    // 5️⃣ simpan reference & attach ke container
+    container._lottie = anim;
+    lottieInstances.push(anim);
+
+    // 6️⃣ observe
+    observer.observe(container);
+  });
+
+  // 7️⃣ animasi utama di home
+  if(mainContainer){
+    const mainAnim=lottie.loadAnimation({
+      container:mainContainer,
+      renderer:"svg",
+      loop:true,
+      autoplay:false,
+      path:"ikon-1.json"
+    });
+    mainAnim.addEventListener("DOMLoaded", ()=>mainContainer.classList.remove("skeleton"));
+    mainContainer._lottie = mainAnim;
+    lottieInstances.push(mainAnim);
+    observer.observe(mainContainer);
+  }
+}
+
+  /* ================= SCROLL EFFECT ================= */
+  function initScrollEffect(scrollHeader, logoTop){
+    const viewHome=document.getElementById("view-home");
+    if(!viewHome) return;
+    function handleScroll(){
+      const scrollTop=viewHome.scrollTop;
+      if(logoTop) logoTop.classList.toggle("scrolled",scrollTop>10);
+      if(scrollHeader) scrollHeader.style.opacity=Math.min(scrollTop/50,1);
+    }
+    viewHome.addEventListener("scroll",handleScroll);
+  }
+
+  initHome();
+};
+
+/* ================= GO ORDER ================= */
+window.goOrder = function(type){
+  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active","zoom-in","zoom-out"));
+  const viewOrder=document.getElementById("view-order");
+  if(viewOrder){ viewOrder.classList.add("active","zoom-in"); viewOrder.style.zIndex=2; viewOrder.dataset.type=type; }
+  setTimeout(()=>{ if(typeof fokusInputOrder==="function") fokusInputOrder(); },300);
+  toggleHomeHeader(false);
+  toggleNavbarForOrder(true);
+  console.log("SPA Order type:",type);
+  const layananMap={umum:"Beli Makanan", belanja:"Beli Belanjaan", antar:"Antar Barang", lainnya:"Suruh Lainnya"};
+  const layanan = layananMap[type]||"Beli Makanan";
+  if(typeof selectService==="function") selectService(layanan);
+};
+
+/* ================= GO ORDER MERCHANT ================= */
+window.goOrderMerchant = function(toko){
+  if(!toko||!toko.id){ console.error("Toko tidak valid",toko); return; }
+  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active","zoom-in","zoom-out"));
+  const view=document.getElementById("view-orderMerchant");
+  if(view){ view.classList.add("active","zoom-in"); view.style.zIndex=2; }
+  window.selectedToko=toko;
+  toggleHomeHeader(false);
+  toggleNavbarForOrder(true);
+  if(typeof loadMerchantData==="function") loadMerchantData(toko.id);
+  console.log("Merchant order:",toko);
+};
+
+/* ================= LIST TOKO ================= */
+// ===== HITUNG JARAK (KM) =====
+function hitungJarak(lat1,lng1,lat2,lng2){
+  const R=6371;
+  const dLat=(lat2-lat1)*Math.PI/180;
+  const dLng=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ===== HITUNG DESA TERDEKAT =====
+function desaOngkir(lat,lng){
+  if(!semuaDesa.length) return [];
+  return semuaDesa
+    .map(d=>({...d, jarak:hitungJarak(lat,lng,d.lat,d.lng)}))
+    .sort((a,b)=>a.jarak-b.jarak);
+}
+
+// ===== LOAD TOKO =====
+function renderSkeletonToko(){
+  const container = document.getElementById("listToko");
+  if(!container) return;
+
+  container.innerHTML = "";
+
+  for(let i=0;i<4;i++){
+    const sk = document.createElement("div");
+    sk.className = "toko-card";
+
+    sk.innerHTML = `
+      <div class="skeleton toko-foto"></div>
+      <div class="toko-info">
+        <div class="skeleton sk-text title"></div>
+        <div class="skeleton sk-text desc"></div>
+        <div class="skeleton sk-text small"></div>
+      </div>
+    `;
+
+    container.appendChild(sk);
+  }
+}
+async function loadToko(){
+
+  // 🔥 tampilkan skeleton dulu
+  renderSkeletonToko();
+  // 🔥 tampilkan cache dulu (instant UI)
+  const cached = localStorage.getItem("toko");
+  
+  if(cached){
+    semuaToko = JSON.parse(cached);
+    renderTokoTerdekat();
+  }
+  const snapshot = await db.collection("dataToko")
+    .where("status","==","approved")
+    .limit(10)
+    .get();
+  localStorage.setItem("toko", JSON.stringify(semuaToko));
+  semuaToko=[];
+  snapshot.forEach(doc=>{
+    semuaToko.push({
+      id:doc.id,
+      lat:doc.data().lat||null,
+      lng:doc.data().lng||null,
+      ...doc.data()
+    });
+  });
+
+  requestAnimationFrame(()=>{
+    renderTokoTerdekat();
+  });
+}
+
+// ===== RENDER TOKO TERDEKAT / SEARCH =====
+function renderTokoTerdekat(keyword=""){
+  let filtered = semuaToko.filter(t=> (t.tokoNama||"").toLowerCase().includes(keyword.toLowerCase()));
+  filtered = filtered.filter(t=>t.lat && t.lng);
+  if(userLat && userLng){
+    filtered.forEach(t=>t.jarak=hitungJarak(userLat,userLng,t.lat,t.lng));
+    filtered.sort((a,b)=>a.jarak-b.jarak);
+  } else {
+    filtered.sort(()=>Math.random()-0.5);
+  }
+  renderToko(filtered.slice(0,5));
+}
+
+// ===== RENDER KE DOM (ALAMAT + ONGKIR + CLICK CARD) =====
+function renderToko(list){
+  const container=document.getElementById("listToko");
+  container.innerHTML="";
+  if(list.length===0){
+    container.innerHTML=`<div style="text-align:center;padding:20px;color:#777">Toko tidak ditemukan</div>`;
+    return;
+  }
+  let delay=0;
+  list.forEach(data=>{
+    const card=document.createElement("div");
+    card.className="toko-card";
+
+    // ✅ Hitung ongkir berdasarkan desa terdekat
+    let alamatOngkir = data.tokoAlamat || "";
+    if(data.lat && data.lng && semuaDesa.length){
+      const desaRanked = desaOngkir(data.lat,data.lng);
+      if(desaRanked && desaRanked.length){
+        const ranking = 0; // ambil desa terdekat ranking pertama
+        const ongkir = 3000 + ranking*2000;
+        alamatOngkir += ` (ongkir sekitar Rp ${ongkir.toLocaleString()})`;
+      }
     }
 
-    const updatePayload = {};
+    // ✅ Card tanpa tombol, klik card = goOrderMerchant
+    card.innerHTML = `
+      <img class="toko-foto" src="${data.tokoFotoBase64||''}">
+      <div class="toko-info">
+        <div class="toko-nama">${data.tokoNama||'-'}</div>
+        <div class="toko-deskripsi">${data.tokoDeskripsi||'Toko lokal terpercaya'}</div>
+        ${alamatOngkir ? `
+          <div class="toko-alamat-ongkir">
+            <svg class="icon-location" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5 14.5 7.62 14.5 9 13.38 11.5 12 11.5z"/>
+            </svg>
+            ${alamatOngkir}
+          </div>
+        ` : ""}
+      </div>
+    `;
 
-    if (!orderData.kurir) {
-      updatePayload.kurir = window.currentUser.uid;
-      updatePayload.status = "Diproses";
-      updatePayload.noKurir = noKurir;
-    }
+    container.appendChild(card);
+    setTimeout(()=>card.classList.add("show"),delay);
+    delay+=120;
 
-    await orderRef.update(updatePayload);
+    // ✅ Klik card = buka merchant
+    card.addEventListener("click",()=>goOrderMerchant({id:data.id,nama:data.tokoNama}));
+  });
+}
 
-    loadingText.innerText = "Pesanan berhasil diambil!";
-
-    setTimeout(() => {
-      loading.classList.remove("show");
-      document.getElementById("orderPopup").classList.remove("show");
-
-      // 🔥 pindah ke tugas TANPA reload
-      window.location.hash = "tugas";
-
-    }, 800);
-
-  } catch (e) {
-    console.error("❌ Ambil error:", e);
-
-    loadingText.innerText = e.message || "Gagal mengambil pesanan!";
-    setTimeout(() => loading.classList.remove("show"), 2000);
-  }
-});
-
-// ===== CLOSE POPUP ===== //
-document.getElementById("orderPopup").addEventListener("click", e => {
-  if (e.target.id === "orderPopup") {
-    e.target.classList.remove("show");
-  }
-});
+// ===== SEARCH =====
+const searchInput=document.getElementById("searchToko");
+if(searchInput){
+  searchInput.addEventListener("input",function(){ renderTokoTerdekat(this.value); });
+}

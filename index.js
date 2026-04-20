@@ -291,6 +291,37 @@ window.PopupManager = (function(){
   return { closeAll, showDetail, closeDetail, showEdit, closeEdit, showAlert };
 })();
 
+// ===== GLOBAL NOTIFICATION SENDER ===== //
+window.sendNotification = async function({
+  token,
+  title = "Notifikasi",
+  body = "",
+  data = {}
+}) {
+  if (!token) {
+    console.warn("⚠️ Token kosong, notif batal");
+    return;
+  }
+
+  try {
+    await fetch("https://fcm-server-production-e176.up.railway.app/send-notif", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        token,
+        title,
+        body,
+        data
+      })
+    });
+
+    console.log("📩 Notif terkirim:", title);
+  } catch (err) {
+    console.error("❌ Gagal kirim notif:", err);
+  }
+};
 // REGISTER SERVICE WORKER
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {

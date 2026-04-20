@@ -173,25 +173,15 @@ function listenOrdersHome() {
               console.log("✅ ORDER BERHASIL DIAMBIL");
 
               // ===== KIRIM NOTIF =====
-              if (fcmToken) {
-                try {
-                  await fetch("https://fcm-server-production-e176.up.railway.app/send-notif", {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                      token: fcmToken,
-                      title: "Pesanan Diproses 🚀",
-                      body: `${orderData.layanan || "Pesanan"} sedang diproses`
-                    })
-                  });
-
-                  console.log("📩 Notifikasi terkirim");
-                } catch (errNotif) {
-                  console.warn("⚠️ Gagal kirim notif:", errNotif);
+              await window.sendNotification({
+                token: fcmToken,
+                title: "Pesanan Diproses 🚀",
+                body: `${orderData.layanan || "Pesanan"} sedang diproses`,
+                data: {
+                  type: "order_diproses",
+                  orderId: window.selectedOrderId
                 }
-              }
+              });
 
               // ===== SUCCESS UI =====
               loadingText.innerText = "Pesanan berhasil diambil!";

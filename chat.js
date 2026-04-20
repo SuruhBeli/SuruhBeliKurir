@@ -316,7 +316,7 @@ async function sendMessage() {
 
   const localTime = Date.now();
 
-  // ===== 🔥 AMBIL NAMA PENGIRIM (users / kurir) =====
+  // ===== 🔥 AMBIL NAMA PENGIRIM =====
   let senderName = "User";
   let senderType = "users";
 
@@ -338,21 +338,16 @@ async function sendMessage() {
   // ===== MESSAGE DATA =====
   const messageData = {
     senderId: user.uid,
-    senderName,        // 🔥 simpan langsung (biar ringan & cepat)
-    senderType,        // 🔥 kurir / users
+    senderName,
+    senderType,
     text,
     type: "text",
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     localCreatedAt: localTime,
     deleted: false,
     deletedFor: {},
-
-    deliveredTo: {
-      [user.uid]: true
-    },
-    readBy: {
-      [user.uid]: true
-    }
+    deliveredTo: { [user.uid]: true },
+    readBy: { [user.uid]: true }
   };
 
   // ===== REPLY =====
@@ -396,6 +391,7 @@ async function sendMessage() {
       .update({
         lastMessage: text,
         lastSenderId: user.uid,
+        lastSenderName: senderName,
         lastTimestamp: firebase.firestore.FieldValue.serverTimestamp(),
         lastType: "text"
       });
@@ -415,44 +411,23 @@ async function sendMessage() {
       }
     }
 
-    // ===== 🔔 NOTIF WA STYLE =====
+    // ===== 🔔 KIRIM NOTIF (SIMPLE & FIX) =====
     if (fcmToken) {
-
       const previewText = text.length > 100
         ? text.substring(0, 100) + "..."
         : text;
 
-      fetch("https://fcm-server-production-e176.up.railway.app/send-notif", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          token: fcmToken,
+      await window.sendNotification({
+        token: fcmToken,
+        title: senderName,     // 🔥 nama pengirim
+        body: previewText,     // 🔥 isi pesan
+        data: {
+          type: "chat",
+          roomId: roomId
+        }
+      });
 
-          notification: {
-            title: senderName,     // 🔥 nama pengirim
-            body: previewText,     // 🔥 isi pesan
-            sound: "default"
-          },
-
-          android: {
-            notification: {
-              tag: "chat_" + roomId, // 🔥 biar notif gabung (WA style)
-              channelId: "chat_messages",
-              priority: "high"
-            }
-          },
-
-          data: {
-            roomId: roomId,
-            senderId: user.uid,
-            senderName: senderName,
-            senderType: senderType,
-            message: previewText
-          }
-        })
-      }).catch(err => console.warn("Notif gagal:", err));
+      console.log("📩 Notif chat terkirim:", senderName, previewText);
     }
 
   } catch (err) {

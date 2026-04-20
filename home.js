@@ -3,7 +3,6 @@ window.initHome = function() {
   if (!window.currentUser) return;
 
   console.log("🔥 initHome (sekali saja)");
-
   listenOrdersHome();
 };
 
@@ -19,9 +18,10 @@ function listenOrdersHome() {
   headerFoto.src = "header.png";
 
   if (!window.USER_CACHE) window.USER_CACHE = {};
+  if (!window.LISTENERS) window.LISTENERS = {};
 
   // 🔥 Stop listener lama biar ga dobel
-  if (window.LISTENERS?.home) {
+  if (window.LISTENERS.home) {
     window.LISTENERS.home();
   }
 
@@ -103,7 +103,7 @@ function listenOrdersHome() {
           if (data.lat && data.lng) {
             window.open(`https://www.google.com/maps/search/?api=1&query=${data.lat},${data.lng}`);
           } else {
-            window.PopupManager.showAlert("Lokasi belum tersedia!");
+            alert("Lokasi belum tersedia!");
           }
         };
 
@@ -132,6 +132,7 @@ function listenOrdersHome() {
             loading.classList.add("show");
 
             try {
+              // ===== AMBIL DATA KURIR =====
               const kurirDoc = await window.db.collection("kurir").doc(window.currentUser.uid).get();
               if (!kurirDoc.exists) throw new Error("Data kurir tidak ditemukan!");
 
@@ -143,10 +144,22 @@ function listenOrdersHome() {
 
               const orderData = orderDoc.data();
 
+              // 🔒 CEK SUDAH DIAMBIL
               if (orderData.kurir && orderData.kurir !== window.currentUser.uid) {
                 throw new Error("Order sudah diambil kurir lain!");
               }
 
+              // ===== AMBIL FCM TOKEN USER =====
+              let fcmToken = null;
+
+              if (orderData.userId) {
+                const userDoc = await window.db.collection("users").doc(orderData.userId).get();
+                if (userDoc.exists) {
+                  fcmToken = userDoc.data().fcmToken || null;
+                }
+              }
+
+              // ===== UPDATE ORDER =====
               const updatePayload = {};
 
               if (!orderData.kurir) {
@@ -159,6 +172,28 @@ function listenOrdersHome() {
 
               console.log("✅ ORDER BERHASIL DIAMBIL");
 
+              // ===== KIRIM NOTIF =====
+              if (fcmToken) {
+                try {
+                  await fetch("https://fcm-server-production-e176.up.railway.app/send-notif", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                      token: fcmToken,
+                      title: "Pesanan Diproses 🚀",
+                      body: `${orderData.layanan || "Pesanan"} sedang diproses`
+                    })
+                  });
+
+                  console.log("📩 Notifikasi terkirim");
+                } catch (errNotif) {
+                  console.warn("⚠️ Gagal kirim notif:", errNotif);
+                }
+              }
+
+              // ===== SUCCESS UI =====
               loadingText.innerText = "Pesanan berhasil diambil!";
 
               setTimeout(() => {

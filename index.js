@@ -8,7 +8,7 @@ if (!window.firebaseInitialized) {
     messagingSenderId: "5783247867",
     appId: "1:5783247867:web:8f57e09a7dc4565378c95e",
     measurementId: "G-W68JP10CG9",
-    databaseURL: "https://suruhbeli-e8ae8-default-rtdb.asia-southeast1.firebasedatabase.app",
+    databaseURL: "https://suruhbeli-e8ae8-default-rtdb.asia-southeast1.firebasedatabase.app"
   };
 
   firebase.initializeApp(firebaseConfig);

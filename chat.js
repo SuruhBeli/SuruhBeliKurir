@@ -304,23 +304,49 @@ input?.addEventListener("keydown", e => {
     sendMessage();
   }
 });
-function sendMessage() {
+async function sendMessage() {
   const user = window.currentUser;
   if (!roomId || !user || !input) return;
+
   const typingRef = rtdb.ref(`typing/${roomId}/${user.uid}`);
   typingRef.set(false);
+
   const text = input.value.trim();
   if (!text) return;
+
   const localTime = Date.now();
+
+  // ===== 🔥 AMBIL NAMA PENGIRIM (users / kurir) =====
+  let senderName = "User";
+  let senderType = "users";
+
+  try {
+    let myDoc = await db.collection("users").doc(user.uid).get();
+
+    if (!myDoc.exists) {
+      myDoc = await db.collection("kurir").doc(user.uid).get();
+      senderType = "kurir";
+    }
+
+    if (myDoc.exists) {
+      senderName = myDoc.data().nama || "User";
+    }
+  } catch (err) {
+    console.warn("Ambil nama pengirim gagal:", err);
+  }
+
+  // ===== MESSAGE DATA =====
   const messageData = {
     senderId: user.uid,
+    senderName,        // 🔥 simpan langsung (biar ringan & cepat)
+    senderType,        // 🔥 kurir / users
     text,
     type: "text",
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     localCreatedAt: localTime,
     deleted: false,
     deletedFor: {},
-    // 🔥 WAJIB
+
     deliveredTo: {
       [user.uid]: true
     },
@@ -328,51 +354,112 @@ function sendMessage() {
       [user.uid]: true
     }
   };
-  // ===== Reply Support =====
+
+  // ===== REPLY =====
   if (replyState.active) {
     messageData.replyTo = {
       messageId: replyState.messageId,
       text: replyState.text
     };
   }
-  // ===== Optimistic UI =====
+
+  // ===== OPTIMISTIC UI =====
   const tempMessage = {
     id: "temp_" + localTime,
     ...messageData,
     createdAt: localTime,
     isTemp: true
   };
+
   renderMessages({
     forEach: (cb) => cb({
       id: tempMessage.id,
       data: () => tempMessage
     })
   }, { appendOnly: true });
-  // ===== Reset deletedFor supaya room muncul lagi =====
+
+  // ===== RESET ROOM =====
   db.collection("chatRooms")
     .doc(roomId)
-    .set({ deletedFor: {} }, { merge: true })
-    .catch(err => console.error("Reset deletedFor error:", err));
-  // ===== Kirim ke Firestore =====
-  db.collection("chatRooms")
-    .doc(roomId)
-    .collection("messages")
-    .add(messageData)
-    .then(docRef => {
-      // 🚀 Update last message
-      return db.collection("chatRooms")
-        .doc(roomId)
-        .update({
-          lastMessage: text,
-          lastSenderId: user.uid,
-          lastTimestamp: firebase.firestore.FieldValue.serverTimestamp(),
-          lastType: "text"
+    .set({ deletedFor: {} }, { merge: true });
+
+  try {
+    // ===== SAVE MESSAGE =====
+    await db.collection("chatRooms")
+      .doc(roomId)
+      .collection("messages")
+      .add(messageData);
+
+    // ===== UPDATE LAST MESSAGE =====
+    await db.collection("chatRooms")
+      .doc(roomId)
+      .update({
+        lastMessage: text,
+        lastSenderId: user.uid,
+        lastTimestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        lastType: "text"
+      });
+
+    // ===== 🔔 AMBIL TOKEN LAWAN =====
+    let fcmToken = null;
+
+    if (otherUserId) {
+      let userDoc = await db.collection("users").doc(otherUserId).get();
+
+      if (!userDoc.exists) {
+        userDoc = await db.collection("kurir").doc(otherUserId).get();
+      }
+
+      if (userDoc.exists) {
+        fcmToken = userDoc.data().fcmToken || null;
+      }
+    }
+
+    // ===== 🔔 NOTIF WA STYLE =====
+    if (fcmToken) {
+
+      const previewText = text.length > 100
+        ? text.substring(0, 100) + "..."
+        : text;
+
+      fetch("https://fcm-server-production-e176.up.railway.app/send-notif", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          token: fcmToken,
+
+          notification: {
+            title: senderName,     // 🔥 nama pengirim
+            body: previewText,     // 🔥 isi pesan
+            sound: "default"
+          },
+
+          android: {
+            notification: {
+              tag: "chat_" + roomId, // 🔥 biar notif gabung (WA style)
+              channelId: "chat_messages",
+              priority: "high"
+            }
+          },
+
+          data: {
+            roomId: roomId,
+            senderId: user.uid,
+            senderName: senderName,
+            senderType: senderType,
+            message: previewText
+          }
         })
-        .then(() => {
-        });
-    })
-    .catch(err => console.error("Send message error:", err));
-  // ===== Reset Input =====
+      }).catch(err => console.warn("Notif gagal:", err));
+    }
+
+  } catch (err) {
+    console.error("Send message error:", err);
+  }
+
+  // ===== RESET INPUT =====
   input.value = "";
   input.style.height = "auto";
   cancelReply();

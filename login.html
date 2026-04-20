@@ -111,6 +111,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 
 <script>
   // ===== FIREBASE CONFIG (WAJIB SAMA DENGAN INDEX) =====
@@ -125,6 +126,7 @@
 
   const auth = firebase.auth();
   const db = firebase.firestore();
+  const messaging = firebase.messaging();
 
   const alertMsg = document.getElementById('alertMsg');
 
@@ -157,8 +159,49 @@
         return;
       }
 
-      // 🔥 SUCCESS → MASUK APP
-      window.location.href = "index.html";
+    // ==============================
+    // 🔔 AMBIL FCM TOKEN DULU
+    // ==============================
+    let fcmToken = null;
+    
+    try {
+      const permission = await Notification.requestPermission();
+    
+      if (permission === "granted") {
+    
+        fcmToken = await messaging.getToken({
+          vapidKey: "BPFu-mVlFSpkPquH-LfxvM2gc4Y7fEmmXb1svxx8tNp3w6N09Na45KF05UKz4zETuZyKRP5LKNggOk1gz6004NM"
+        });
+    
+        console.log("🔥 FCM TOKEN:", fcmToken);
+    
+      } else {
+        console.warn("❌ Izin notif ditolak");
+      }
+    
+    } catch (err) {
+      console.error("❌ Gagal ambil FCM:", err);
+    }
+    
+    // ==============================
+    // 🔥 SIMPAN TOKEN KE FIRESTORE
+    // ==============================
+    try {
+      if (fcmToken) {
+        await db.collection("kurir").doc(user.uid).set({
+          fcmToken: fcmToken
+        }, { merge: true });
+    
+        console.log("✅ Token disimpan ke kurir");
+      }
+    } catch (err) {
+      console.error("❌ Gagal simpan token:", err);
+    }
+    
+    // ==============================
+    // 🚀 MASUK APP
+    // ==============================
+    window.location.href = "index.html";
 
     }catch(error){
       console.error("Login error:", error);
